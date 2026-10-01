@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=mt76
-PKG_RELEASE=1
+PKG_RELEASE=2
 
 PKG_LICENSE:=BSD-3-Clause-Clear
 PKG_LICENSE_FILES:=
@@ -709,10 +709,11 @@ define KernelPackage/mt7992-23-firmware/install
 		$(1)/lib/firmware/mediatek/mt7996
 endef
 
+# The 2+3+3 variant shares this package and keeps its upstream DSP.
 define KernelPackage/mt7996-firmware-common/install
 	$(INSTALL_DIR) $(1)/lib/firmware/mediatek/mt7996
 	cp \
-		$(PKG_BUILD_DIR)/firmware/mt7996/mt7996_dsp.bin \
+		$(if $(CONFIG_PACKAGE_kmod-mt7996-firmware),./files/mt7996-20260721/mt7996_dsp.bin,$(PKG_BUILD_DIR)/firmware/mt7996/mt7996_dsp.bin) \
 		$(1)/lib/firmware/mediatek/mt7996
 endef
 
@@ -721,9 +722,9 @@ define KernelPackage/mt7996-firmware/install
 	cp \
 		$(PKG_BUILD_DIR)/firmware/mt7996/mt7996_eeprom.bin \
 		$(PKG_BUILD_DIR)/firmware/mt7996/mt7996_eeprom_2i5i6i.bin \
-		$(PKG_BUILD_DIR)/firmware/mt7996/mt7996_rom_patch.bin \
-		$(PKG_BUILD_DIR)/firmware/mt7996/mt7996_wa.bin \
-		$(PKG_BUILD_DIR)/firmware/mt7996/mt7996_wm.bin \
+		./files/mt7996-20260721/mt7996_rom_patch.bin \
+		./files/mt7996-20260721/mt7996_wa.bin \
+		./files/mt7996-20260721/mt7996_wm.bin \
 		$(1)/lib/firmware/mediatek/mt7996
 endef
 

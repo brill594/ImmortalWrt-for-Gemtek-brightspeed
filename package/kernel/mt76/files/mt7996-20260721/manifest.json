@@ -1,0 +1,55 @@
+{
+  "repository": "https://github.com/mediatek/mtk-openwrt-feeds",
+  "feed_commit": "645a8a743c5735bca6dedef9b5dc541849ca5f73",
+  "firmware_update_commit": "e1d5a2d3f750976080b7b1559cabafe31322819f",
+  "files": [
+    {
+      "filename": "mt7996_wm.bin",
+      "url": "https://raw.githubusercontent.com/mediatek/mtk-openwrt-feeds/645a8a743c5735bca6dedef9b5dc541849ca5f73/autobuild/unified/filogic/mac80211/25.12/files/package/kernel/mt76/src/firmware/mt7996/mt7996_wm.bin",
+      "size": 2666168,
+      "sha256": "99020e57ff91fdee09b833f9d35f97ff70722d0ef32fa8b02f70c8d3c6f95592",
+      "internal_date": "20260721003035",
+      "internal_version_strings": [
+        "t-neptune-main-7990-7992-7993-2443-MT7990_MT7988D_BE13500_MP5_2ADIE-20260721002612",
+        "____00000020260721003035"
+      ]
+    },
+    {
+      "filename": "mt7996_wa.bin",
+      "url": "https://raw.githubusercontent.com/mediatek/mtk-openwrt-feeds/645a8a743c5735bca6dedef9b5dc541849ca5f73/autobuild/unified/filogic/mac80211/25.12/files/package/kernel/mt76/src/firmware/mt7996/mt7996_wa.bin",
+      "size": 510064,
+      "sha256": "06106c918866c7ae3da47b27223da17030212a1a4adcb5c23871325291d06448",
+      "internal_date": "20260721002917",
+      "internal_version_strings": [
+        "____00000020260721002917"
+      ]
+    },
+    {
+      "filename": "mt7996_dsp.bin",
+      "url": "https://raw.githubusercontent.com/mediatek/mtk-openwrt-feeds/645a8a743c5735bca6dedef9b5dc541849ca5f73/autobuild/unified/filogic/mac80211/25.12/files/package/kernel/mt76/src/firmware/mt7996/mt7996_dsp.bin",
+      "size": 192688,
+      "sha256": "7c4d3854fbac6a09b511a5894dbad84c1a09327d98732ddf078fe62a472d228d",
+      "internal_date": "20260721002848",
+      "internal_version_strings": [
+        "t-neptune-main-7990-7992-7993-2443-MT7990_MT7988D_BE13500_MP5_2ADIE-20260721002612",
+        "____00000020260721002848"
+      ]
+    },
+    {
+      "filename": "mt7996_rom_patch.bin",
+      "url": "https://raw.githubusercontent.com/mediatek/mtk-openwrt-feeds/645a8a743c5735bca6dedef9b5dc541849ca5f73/autobuild/unified/filogic/mac80211/25.12/files/package/kernel/mt76/src/firmware/mt7996/mt7996_rom_patch.bin",
+      "size": 37216,
+      "sha256": "12e3b4cbb49bd175f8ef9be82f2bb36af47c441a645cc0be790b1f979fbae400",
+      "internal_date": "20260721003041",
+      "internal_version_strings": [
+        "20260721003041a"
+      ]
+    }
+  ],
+  "notes": [
+    "Research candidate only; not deployed or verified compatible with AN7581 NPU firmware 0.1111.",
+    "No EEPROM files downloaded or changed.",
+    "Firmware update changelog does not explicitly claim TX aggregation performance fix."
+  ],
+  "license_candidates_in_feed": []
+}
