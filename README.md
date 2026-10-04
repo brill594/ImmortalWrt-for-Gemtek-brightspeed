@@ -103,81 +103,55 @@ XG2010G 与 XR1710G 同属 Airoha AN7581 平台，但硬件布局和软件包集
 - 三个无线射频默认启用：2.4GHz 为 HE20/自动信道/28dBm，5GHz 为 EHT160/信道 36/30dBm，6GHz 为 EHT320/信道 37/30dBm。
 - FlowSense 提供 Router/AP 模式、VLAN 标签/PPPoE 透传/AP 模式卸载状态与自定义 Ping 延迟检测；NPU 页面提供 PPE/Frame Engine 与 CPU 频率状态；风扇页面提供实时温度、RPM/PWM 曲线与自定义曲线。
 
-### 预装 LuCI 应用（25 个，含中文界面）
+### XR1710G 基础软件配置
 
-#### 设备专属与仓库内置（来自 [package/](package/)）
+`1710.config` 默认提供基础路由固件，保留 LuCI、Dropbear SSH、DNS/DHCP、IPv6、PPPoE、防火墙、三频无线和 NPU/风扇/升级支持。附加应用源码仍可按需选择安装；XG2010G 的 `2010.config` 独立维护。
 
-| 应用 | 来源 | 功能 |
-|------|------|------|
-| `luci-app-airoha` | 本仓库合并（NPU 状态上游 [rchen14b/luci-app-airoha-npu](https://github.com/rchen14b/luci-app-airoha-npu) + [Gilly1970/Gemtek-W1700K](https://github.com/Gilly1970/Gemtek-W1700K) FlowSense） | 合并应用（两个标签页）：SoC/NPU 状态与加速开关；FlowSense（PPE 硬件 offload、VLAN 标签/PPPoE 透传/AP 模式卸载状态与延迟检测） |
-| `luci-app-airoha-fancontrol` | [Gilly1970/Gemtek-W1700K](https://github.com/Gilly1970/Gemtek-W1700K) | 风扇速度/温度控制与曲线 |
-| `luci-app-airoha-recovery` | 本仓库 | 一键重启进入 U-Boot HTTP Recovery（一次性触发） |
-| `luci-app-lucky` | [sirpdboy/luci-app-lucky](https://github.com/sirpdboy/luci-app-lucky) | Lucky（DDNS/反代/端口转发） |
+| 预装管理组件 | 用途 |
+|---|---|
+| `luci`、`luci-theme-bootstrap`、中文语言包 | 基础管理界面 |
+| `luci-app-firewall` | firewall4/nftables 防火墙管理 |
+| `luci-app-package-manager` | APK 包管理 |
+| `luci-app-airoha` | NPU 状态与 FlowSense |
+| `luci-app-airoha-fancontrol` | 温度及风扇控制 |
+| `luci-app-airoha-recovery` | 兼容 chainloader 的恢复入口；安装此包不会使菜单版 U-Boot 获得 HTTP Recovery |
 
-#### 网络与远程接入
+无线使用 `wpad-mbedtls`，不预装 Mesh 同步、dawn/usteer 漫游服务。代理/VPN、DDNS、SmartDNS、远程 Web 终端、推送、组播转换、KMS、定时任务类应用及其非必要依赖不在默认镜像中。
 
-| 应用 | 功能 |
-|------|------|
-| `luci-app-zerotier` | ZeroTier 虚拟局域网 |
-| `luci-app-ddns-go` | DDNS-Go 动态域名（支持阿里云/Cloudflare/DNSPod） |
-| `luci-app-ddns` | 传统 DDNS 脚本 |
-| `luci-app-upnp` | UPnP 自动端口转发 |
-| `luci-app-firewall` | 防火墙（firewall4/nftables） |
-| `luci-app-arpbind` | IP/MAC 绑定 |
-| `luci-app-mlo` | MLO（Wi-Fi 7 多链路操作） |
-| `luci-app-msd_lite` | MSD Lite 组播播放 |
+板级 DTS、分区、校准获取、MT7996/NPU 固件、CPU/数据路径调优及标准 sysupgrade 流程继续沿用当前基线。基础诊断工具保留 `ip-full`、`iw`、`ethtool-full`、`curl`、`jq` 和 UBI/U-Boot 工具。
 
-#### 系统与自动化
+从原有多插件镜像升级时，先备份配置并检查是否仍引用 SmartDNS、VPN 或已移除的服务；这些配置不会因为包不再预装而自动清理。未使用自定义配置的设备可选择不保留配置后重新设置。
+保留配置升级时，若旧配置选择 Argon 而镜像已无 Argon 文件，首启会切换到 Bootstrap；仍有 Argon 文件或使用其他主题时不改动主题选择。
 
-| 应用 | 功能 |
-|------|------|
-| `luci-app-package-manager` | APK 包管理器 |
-| `luci-app-ttyd` | Web 终端 |
-| `luci-app-autoreboot` | 定时重启 |
-| `luci-app-timewol` | 定时网络唤醒 |
-| `luci-app-wifischedule` | Wi-Fi 定时开关 |
-| `luci-app-watchcat` | 网络看门狗 |
-| `luci-app-wol` | 网络唤醒 |
-| `luci-app-vlmcsd` | KMS 激活服务 |
-| `luci-app-rtp2httpd` | RTP 转 HTTP |
-| `luci-app-udpxy` | UDP 组播代理 |
-| `luci-app-wechatpush` | 微信推送通知 |
-| `luci-app-wifihistory` | WiFi 历史记录 |
+### LAN iperf3 服务
 
-> 为控制固件体积，当前不预装 `luci-app-openclash`、`luci-app-passwall`、`luci-app-adguardhome` 和 `luci-app-smartdns`；SmartDNS 核心及独立 UI 仍保留。
+`1710.config` 预装 `iperf3-server`，开机由 procd 启动，默认使用 TCP/UDP **5201**。服务同时绑定逻辑 `lan` 的 **IPv4 地址与实际网卡**；没有 LAN 地址或网卡时不启动，不回退到全地址监听。LAN 上下线或地址变化后重新绑定。不额外添加 WAN 防火墙放行规则，也不监听 IPv6。
 
-### 主要系统包
+客户端在 LAN 中运行，例如：
 
-**网络核心**
-- `dnsmasq-full`（完整版 DNS/DHCP）
-- `firewall4` + `nftables-json`（nftables 防火墙）
-- `wpad-mbedtls`（WPA2/WPA3、EHT/MLO 支持）
-- `odhcp6c` / `odhcpd-ipv6only`（IPv6）
-- `ppp` / `ppp-mod-pppoe`（PPPoE）
-- `smartdns` + `smartdns-ui`（DNS 加速/分流）
-- `wireguard-tools` + `luci-proto-wireguard` + `rpcd-mod-wireguard`（WireGuard）
+```sh
+iperf3 -c 192.168.50.1 -t 5
+iperf3 -c 192.168.50.1 -u -b 10M -t 5
+```
 
-**内核模块（kmod）**
-- `kmod-mt7996-firmware` / `kmod-mt7996e`（MT7996 Wi-Fi 7 驱动）
-- `airoha-en7581-mt7996-npu-firmware`（Airoha NPU 固件）
-- `kmod-crypto-hw-eip93`（硬件加密加速）
-- `kmod-nft-offload`（硬件流量卸载）
-- `kmod-br-netfilter` / `kmod-tcp-bbr`（桥接 Netfilter / BBR 拥塞控制）
-- `kmod-wireguard`（WireGuard 内核支持）
-- `kmod-hwmon-nct7802`（NCT7802 温度传感器）
-- `kmod-airoha-i2c` / `kmod-leds-gpio` / `kmod-gpio-button-hotplug`
-- `kmod-phy-realtek` / `kmod-mt76-connac` / `kmod-mt76-core`
-- `rtl826x-firmware`（RTL8261BE PHY 固件）
+服务管理：
 
-**系统工具**
-- `bash` / `coreutils` / `curl` / `ip-full`
-- `ethtool-full` / `pciutils` / `uboot-envtools`
-- `luci-theme-argon` + `luci-theme-bootstrap`
-- `default-settings-chn`（中文默认设置）
+```sh
+/etc/init.d/iperf3-server status
+/etc/init.d/iperf3-server restart
+# 不需要测速时可停止并取消开机启动
+/etc/init.d/iperf3-server stop
+/etc/init.d/iperf3-server disable
+# 恢复开机启动和当前运行
+/etc/init.d/iperf3-server enable
+/etc/init.d/iperf3-server start
+```
 
-**代理与网络核心**
-- `xray-core` / `simple-obfs-client`
-- `chinadns-ng` / `geoview` / `dns2socks` / `microsocks` / `ipt2socks`
+修改过 LAN 防火墙入站策略时，需自行允许 LAN 的 TCP/UDP 5201。绑定网卡采用 iperf3 的 [`--bind-dev`](https://software.es.net/iperf/invoking.html) 功能，避免从 WAN 进入、目标地址却填写 LAN IP 的连接被服务接收。
+
+本机 iperf3 测试包含路由器自身协议栈开销，不代表 NPU 转发吞吐。此前本机无线多流测试有三频失联记录，建议先做有线、短时间单流验证；长时间压力测试前保存外部日志。
+
+修改服务脚本后可运行 `python3 scripts/check-iperf3-server.py`，检查 LAN 未就绪时不启动、地址/设备绑定及网络变化触发逻辑。
 
 ## GitHub Actions 工作流
 

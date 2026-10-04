@@ -1,0 +1,14 @@
+#!/bin/sh
+
+. /lib/functions/system.sh
+
+[ "$(board_name)" = "gemtek,xr1710g-ubi" ] || exit 0
+[ "$(uci -q get luci.main.mediaurlbase)" = "/luci-static/argon" ] || exit 0
+[ ! -d /www/luci-static/argon ] || exit 0
+[ -d /www/luci-static/bootstrap ] || exit 0
+
+# A settings-preserving upgrade can keep the theme removed from the image.
+uci -q set luci.main.mediaurlbase='/luci-static/bootstrap'
+uci -q commit luci
+
+exit 0
