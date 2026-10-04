@@ -4,8 +4,9 @@
 
 [ "$(board_name)" = "gemtek,xr1710g-ubi" ] || exit 0
 [ "$(uci -q get luci.main.mediaurlbase)" = "/luci-static/argon" ] || exit 0
-[ ! -d /www/luci-static/argon ] || exit 0
-[ -d /www/luci-static/bootstrap ] || exit 0
+# Base branding can leave an Argon background directory without the theme.
+[ ! -f /www/luci-static/argon/css/cascade.css ] || exit 0
+[ -f /www/luci-static/bootstrap/cascade.css ] || exit 0
 
 # A settings-preserving upgrade can keep the theme removed from the image.
 uci -q set luci.main.mediaurlbase='/luci-static/bootstrap'
