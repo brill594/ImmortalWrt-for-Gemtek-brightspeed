@@ -1,0 +1,26 @@
+Subject: [PATCH] net: airoha: leave packet flow hashing to the stack
+
+The FOE table index is needed by PPE, but is not always a packet flow
+hash. Four host-directed UDP streams on XR1710G reported index 0x7fff
+and CPU reason 7. All 35760 captured packets consequently received the
+same jhash_1word() value, marked as an L4 hash. RPS then kept every flow
+on one CPU even with a two-CPU receive mask.
+
+Leave the skb hash unset so the stack can derive it from the packet.
+Keep the descriptor index and PPE flow-learning hook unchanged.
+
+--- a/drivers/net/ethernet/airoha/airoha_eth.c
++++ b/drivers/net/ethernet/airoha/airoha_eth.c
+@@ -981,9 +981,9 @@ static int airoha_qdma_rx_process(struct airoha_queue *q, int budget)
+ 
+ 		msg1 = le32_to_cpu(READ_ONCE(desc->msg1));
+ 		hash = FIELD_GET(AIROHA_RXD4_FOE_ENTRY, msg1);
+-		if (hash != AIROHA_RXD4_FOE_ENTRY)
+-			skb_set_hash(q->skb, jhash_1word(hash, 0),
+-				     PKT_HASH_TYPE_L4);
++		/* FOE slots can be shared by unrelated host-directed flows.
++		 * Let the stack compute the packet hash for receive steering.
++		 */
+ 
+ 		reason = FIELD_GET(AIROHA_RXD4_PPE_CPU_REASON, msg1);
+ 		if (reason == PPE_CPU_REASON_HIT_UNBIND_RATE_REACHED)

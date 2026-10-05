@@ -32,6 +32,16 @@ next_cpu=1
 tx_cpu=1
 [ "$cpu_count" -gt 2 ] && tx_cpu=2
 
+mcu_rx_tids=""
+for pid_file in /sys/kernel/debug/ieee80211/phy*/mt76/mcu_wa_napi_pid; do
+	[ -r "$pid_file" ] || continue
+	read -r mcu_tid < "$pid_file"
+	case "$mcu_tid" in
+		''|*[!0-9]*|0) continue ;;
+	esac
+	mcu_rx_tids="$mcu_rx_tids $mcu_tid"
+done
+
 for comm in /proc/[0-9]*/task/[0-9]*/comm; do
 	[ -r "$comm" ] || continue
 	read -r name < "$comm"
@@ -39,7 +49,13 @@ for comm in /proc/[0-9]*/task/[0-9]*/comm; do
 	tid="${task##*/}"
 	case "$name" in
 		napi/phy*)
-			taskset -pc "$next_cpu" "$tid" >/dev/null 2>&1
+			task_cpu="$next_cpu"
+			# Keep MCU replies off the CPU3 RPS backlog. Consume the usual
+			# rotation slot so every data worker keeps its previous placement.
+			case " $mcu_rx_tids " in
+				*" $tid "*) task_cpu=1 ;;
+			esac
+			taskset -pc "$task_cpu" "$tid" >/dev/null 2>&1
 			next_cpu=$((next_cpu + 1))
 			[ "$next_cpu" -lt "$cpu_count" ] || next_cpu=1
 			;;

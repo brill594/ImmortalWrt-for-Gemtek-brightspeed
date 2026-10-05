@@ -1,0 +1,54 @@
+Subject: [PATCH] wifi: mt76: npu: preserve RX buffer ownership for partial packets
+
+A packet can span multiple NPU descriptors. If a later descriptor is not
+DONE, freeing the partially assembled skb recycles its buffers while the
+ring tail and queued count still reference them. A subsequent poll or ring
+cleanup can then reuse or release buffers no longer owned by the ring.
+
+Check the entire descriptor chain before constructing an skb. Observe DMA
+ownership before reading packet metadata, and leave an incomplete chain
+untouched for the next poll. Keep NPU acceleration enabled.
+
+This fixes the partial-completion error path; a causal connection to the
+XR1710G PCIe timeout observed on hardware has not yet been established.
+
+--- a/npu.c
++++ b/npu.c
+@@ -67,18 +67,32 @@
+ 	int i, nframes, index = q->tail;
+ 	struct sk_buff *skb = NULL;
+ 
++	if (!q->queued ||
++	    !(READ_ONCE(desc[index].ctrl) & NPU_RX_DMA_DESC_DONE_MASK))
++		return NULL;
++
++	/* The device publishes packet metadata before handing over ownership. */
++	dma_rmb();
+ 	nframes = FIELD_GET(NPU_RX_DMA_PKT_COUNT_MASK, desc[index].info);
+ 	nframes = max_t(int, nframes, 1);
++	if (nframes > q->queued)
++		return NULL;
++
++	/* Keep every buffer owned by the ring until the whole packet is ready.
++	 * Freeing a partial skb would recycle pages still referenced by q->tail.
++	 */
++	for (i = 0; i < nframes; i++) {
++		if (!(READ_ONCE(desc[index].ctrl) & NPU_RX_DMA_DESC_DONE_MASK))
++			return NULL;
++		index = (index + 1) % q->ndesc;
++	}
++	dma_rmb();
++	index = q->tail;
+ 
+ 	for (i = 0; i < nframes; i++) {
+ 		struct mt76_queue_entry *e = &q->entry[index];
+ 		int len = FIELD_GET(NPU_RX_DMA_DESC_CUR_LEN_MASK,
+ 				    desc[index].ctrl);
+-
+-		if (!FIELD_GET(NPU_RX_DMA_DESC_DONE_MASK, desc[index].ctrl)) {
+-			dev_kfree_skb(skb);
+-			return NULL;
+-		}
+ 
+ 		dma_sync_single_for_cpu(dev->dma_dev, e->dma_addr[0],
+ 					e->dma_len[0],

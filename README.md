@@ -93,6 +93,8 @@ XG2010G 与 XR1710G 同属 Airoha AN7581 平台，但硬件布局和软件包集
   - `920-*`、`607-cpufreq`、`990-01`：Airoha 网络、MTU、CPU 频率与桥接 FDB 漫游修复。
 - 无线栈补丁：
   - [mt76 patches](package/kernel/mt76/patches/) 中的 `001`（mt7996 PS sync TLV/MLO 稳定性）与 `9993`（operating-mode rate control）。
+  - `9995` 为 XR1710G 提供只读的 MCU WA 接收线程 ID，板级 `packet-steering.sh` 将该控制线程分配到 CPU1，避免与 CPU3 的繁忙 RPS 数据处理竞争而触发 MCU 超时。数据线程轮转位置、NPU 加速和原有超时策略保留；重启或网络配置重载会重新应用策略。回归检查：`python3 scripts/check-xr1710g-mcu-steering.py`。
+  - `9996` 批量完成 NPU RX，`9997` 在整个分段链完成前保留 RX ring 的缓冲区所有权；mt76 包版本为 r5。XR1710G DTS 启用 `thread_backlog_napi`，有线驱动不再将 FOE 索引声明为 L4 flow hash。短时实测桥接下行接近 2 Gbps，长时稳定性及间歇发送失败仍需验证；不包含临时绑核或诊断探针。
   - [mac80211 patch](package/kernel/mac80211/patches/subsys/411-mac80211-export-link-sta-capability-limits.patch) 与 [hostapd patches](package/network/services/hostapd/patches/)（6GHz、EHT、radio mask 及多 VAP 稳定性）。
 - 启动与设备定制：`03_wifi_defaults`（SSID、加密方式、US 区域码）、`03_wireless`（射频参数）、`18-xr1710g-firewall-defaults`（默认软件/硬件 flow offload）、`99-ppe-reload`（无线接口创建后重载防火墙）、`packet-steering.sh`（Wi-Fi worker/CPU 亲和性）、风扇服务、升级平台脚本，以及独立 [luci-app-airoha-recovery](package/luci-app-airoha-recovery/) U-Boot HTTP Recovery 页面。
 

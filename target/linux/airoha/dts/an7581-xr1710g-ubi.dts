@@ -20,6 +20,7 @@
 	chosen {
 		rootdisk = <&ubi_rootfs>;
 		bootargs = "console=ttyS0,115200 earlycon ubi.block=0,fit root=/dev/fit0 rootwait rdinit=/sbin/init";
+		bootargs-append = " thread_backlog_napi";
 		stdout-path = "serial0:115200n8";
 	};
 	keys {

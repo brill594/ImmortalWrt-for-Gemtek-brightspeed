@@ -1,0 +1,59 @@
+Subject: [PATCH] wifi: mt76: mt7996: identify XR1710G MCU receive thread
+
+On XR1710G, the MCU WA receive thread can share CPU3 with a busy RPS
+backlog. A recorded command completed TX DMA in 74 us, but the awakened
+receive thread waited 2.04 seconds to run, beyond the MCU response timeout.
+The resulting full recovery failed and required a cold boot.
+
+Expose the queue thread ID through read-only debugfs so the board policy
+can keep its receive processing on CPU1. Leave firmware, NPU acceleration,
+timeouts, and data queue processing unchanged.
+
+--- a/mt7996/dma.c
++++ b/mt7996/dma.c
+@@ -2,6 +2,9 @@
+ /*
+  * Copyright (C) 2022 MediaTek Inc.
+  */
++
++#include <linux/of.h>
++#include <linux/sched.h>
+ 
+ #include "mt7996.h"
+ #include "../dma.h"
+@@ -944,6 +947,11 @@
+ 	if (ret < 0)
+ 		return ret;
+ 
++	/* Cache queue identity for steering without reading device registers. */
++	if (of_machine_is_compatible("gemtek,xr1710g-ubi") &&
++	    dev->mt76.napi[MT_RXQ_MCU_WA].thread)
++		dev->mcu_wa_napi_pid = task_pid_nr(dev->mt76.napi[MT_RXQ_MCU_WA].thread);
++
+ 	ret = mt7996_npu_rx_queues_init(dev);
+ 	if (ret)
+ 		return ret;
+--- a/mt7996/mt7996.h
++++ b/mt7996/mt7996.h
+@@ -459,6 +459,8 @@
+ 	struct wiphy_radio radios[MT7996_MAX_RADIOS];
+ 	struct wiphy_radio_freq_range radio_freqs[MT7996_MAX_RADIOS];
+ 	struct mac_address radio_addrs[MT7996_MAX_RADIOS];
++
++	u32 mcu_wa_napi_pid;
+ 
+ 	struct mt7996_hif *hif2;
+ 	struct mt7996_reg_desc reg;
+--- a/mt7996/debugfs.c
++++ b/mt7996/debugfs.c
+@@ -911,6 +911,10 @@
+ 
+ 	dir = mt76_register_debugfs_fops(&dev->mphy, NULL);
+ 
++	if (dev->mcu_wa_napi_pid)
++		debugfs_create_u32("mcu_wa_napi_pid", 0400, dir,
++				   &dev->mcu_wa_napi_pid);
++
+ 	debugfs_create_file("hw-queues", 0400, dir, dev,
+ 			    &mt7996_hw_queues_fops);
+ 	debugfs_create_file("xmit-queues", 0400, dir, dev,

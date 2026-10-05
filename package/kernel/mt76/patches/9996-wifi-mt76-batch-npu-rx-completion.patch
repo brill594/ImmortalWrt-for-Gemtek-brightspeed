@@ -1,0 +1,27 @@
+Subject: [PATCH] wifi: mt76: complete NPU receive frames once per poll batch
+
+The NPU poll loop currently drains rx_skb and takes rx_lock for every
+received frame. The ordinary DMA poll path completes a batch instead.
+Keep NPU receive delivery bounded by the NAPI budget and drain the queued
+frames once, before replenishing descriptors or completing NAPI. Flush
+also when dequeue stops early, while leaving empty polls and the inactive
+NPU path unchanged. Per-frame parsing, ordering and DMA ownership stay in
+the existing receive callbacks.
+
+--- a/npu.c
++++ b/npu.c
+@@ -163,10 +163,11 @@
+ 			break;
+ 
+ 		dev->drv->rx_skb(dev, qid, skb, &info);
++		done++;
++	}
++
++	if (done)
+ 		mt76_rx_poll_complete(dev, qid, napi);
+-		done++;
+-	}
+-
+ 	mt76_npu_fill_rx_queue(dev, &dev->q_rx[qid]);
+ out:
+ 	if (done < budget && napi_complete(napi))
